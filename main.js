@@ -1,3 +1,5 @@
+#!/usr/local/bin/node
+
 /////////////////////////////////////////initialization.//////////////////////////////////////////////////////////////////
 const {Client,Events,Message,BaseChannel,TextChannel,GatewayIntentBits,WebhookClient,WebhookClientDataURL, Base} =require('discord.js');
 require('dotenv').configDotenv();
