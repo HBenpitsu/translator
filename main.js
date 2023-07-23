@@ -175,27 +175,29 @@ async function get_refered_message_id( message,language ){
     };
 }
 
+function get_author_name(message){
+    if (message.author.bot) {
+        return message.author.username
+    } else {
+        return message.member.nickname || message.member.displayName
+    }
+}
+
 async function generate_reference_embed(message, lang){
     const [msg_id,correspond_channels] = await Promise.all([get_refered_message_id(message, lang),get_correspond_channels(message.channel)])
     if (typeof msg_id == 'string') {
         const refered_message = await correspond_channels[lang].messages.fetch(msg_id);
         const embed = new EmbedBuilder();
         
-        if (refered_message.author.bot) {
-            username = refered_message.author.username
-        } else {
-            username = refered_message.member.nickname
-        }
-
         embed.setAuthor(
             {
-                name: "reply_to:" + username,
+                name: "reply_to:" + get_author_name(refered_message),
                 url: refered_message.url,
                 iconURL: refered_message.author.avatarURL({dynamic: true})
             }
         )
         embed.setColor([25,25,25])
-        embed.setTitle(refered_message.content)
+        embed.setDescription(refered_message.content)
         return embed;
     }
 }
@@ -232,7 +234,7 @@ async function send_translated_message( message ){
             ).then(([webhooks,content,embeds])=>{
                     return webhooks.first().send({
                         content: content,
-                        username: message.member.nickname,
+                        username: get_author_name(message),
                         avatarURL: message.author.avatarURL({dynamic: true}),
                         files: Array.from(message.attachments.values()),
                         embeds: embeds
