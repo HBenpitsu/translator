@@ -261,6 +261,18 @@ client.on(Events.MessageCreate,async message=>{
     }
 });
 
+client.on(Events.MessageUpdate,async message=>{
+
+})
+
+client.on(Events.MessageReactionAdd,async reaction=>{
+
+})
+
+client.on(Events.MessageReactionRemove,async reaction=>{
+    
+})
+
 client.once(Events.ClientReady,async client=>{
     console.log('got ready at:',client.readyAt);
 });
