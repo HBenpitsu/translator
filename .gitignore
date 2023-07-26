@@ -1,4 +1,6 @@
 .env
 .venv
+.build
+env.json.ts
 node_modules
 GOOGLE_APPLICATION_CREDENTIALS.json
