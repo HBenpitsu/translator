@@ -5,6 +5,7 @@ const deepl_translator_client = new deepl.Translator(process.env.DEEPL_API_KEY);
 import google from '@google-cloud/translate';
 const {TranslationServiceClient} = google.v3;
 const google_translator_client = new TranslationServiceClient();
+import moment from 'moment';
 
 /**
  * @param from-language-code
@@ -57,6 +58,14 @@ async function translate_with_google(text:string , from:string , to:string): Pro
         return res[0].translations[0].translatedText;
     } else {
         return "translation failed";
+    }
+}
+
+export async function translate(text:string, from:string, to:string, model:string = "deepl"): Promise<string>{
+    switch(model){
+        case 'deepl':return translate_with_deepl(text, from, to);
+        case 'google':return translate_with_google(text, from, to);
+        default: return 'translation failed(unknow model)';
     }
 }
 

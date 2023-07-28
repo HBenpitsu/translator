@@ -5,8 +5,7 @@ import dotenv from 'dotenv';
 dotenv.config({"path": "../.env"});
 
 import {google,deepl} from './translatorInterface.js';
-import { DatabaseInterface, MessageData, ChannelData } from './database.js';
-import { Extension } from 'typescript';
+import {DatabaseInterface} from './database.js';
 
 export class Bot{
     private token: string;
@@ -26,6 +25,7 @@ export class Bot{
             }
         );
         this.database = new DatabaseInterface(
+            this,
             mysql_host,
             mysql_user,
             mysql_password,
@@ -38,26 +38,29 @@ export class Bot{
      * all registers take Bot(this) as an argument.*/
     private async register(dir_path: string): Promise<void>{
         const files = await readdir(`${dir_path}`);
-        const promise_buffer = []
+        var promise_buffer = []
         for (let file of files){
             if (file.endsWith('.js')){
                 promise_buffer.push(
-                    import(`${dir_path}/${file}`)
+                    import(
+                        `${dir_path}/${file}`
+                    ).then(
+                        module => {module.register(this)}
+                    ).catch(
+                        e => {console.error(e);}
+                    )
                 )
-            }
-        }
-        const modules = await Promise.all(promise_buffer)
-        for (let module of modules){
-            module.register(this)
-        }
+            };
+        };
+        await Promise.all(promise_buffer)
     }
 
     /**initialize and run the bot. */
     public async run(): Promise<void>{
         await Promise.all([
             this.register('./eventlisteners'),
-            this.register('./slashcommands'),
-             this.database.init()]
+            //this.register('./slashcommands'),
+            ]
         );
         
         this.client.login(this.token);
