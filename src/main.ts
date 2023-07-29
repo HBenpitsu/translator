@@ -1,11 +1,14 @@
-import {Client,Events,Message,BaseChannel,EmbedBuilder,GatewayIntentBits} from 'discord.js';
+import {Client as RClient,Collection,SlashCommandBuilder,Events,Message,BaseChannel,EmbedBuilder,GatewayIntentBits} from 'discord.js';
 import {readdir} from 'fs/promises';
 
 import dotenv from 'dotenv';
 dotenv.config({"path": "../.env"});
 
-import {google,deepl} from './translatorInterface.js';
 import {DatabaseInterface} from './database.js';
+
+class Client extends RClient{
+    commands!: Collection<string, {data:Omit<SlashCommandBuilder, "addSubcommand" | "addSubcommandGroup">,execute: Function}>;
+}
 
 export class Bot{
     private token: string;
@@ -31,6 +34,7 @@ export class Bot{
             mysql_password,
             mysql_database
         );
+        this.client.commands = new Collection();
     }
 
     /**register modules defined in external files which match to `dir_path/*`.
@@ -59,7 +63,7 @@ export class Bot{
     public async run(): Promise<void>{
         await Promise.all([
             this.register('./eventlisteners'),
-            //this.register('./slashcommands'),
+            this.register('./slashcommands'),
             ]
         );
         

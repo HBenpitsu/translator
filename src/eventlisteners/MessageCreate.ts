@@ -86,15 +86,25 @@ async function send_translated_message(bot:Bot, message: Message){
 
 }
 
-function  is_match_ignore_rule(message:Message ): boolean{
-    return message.content.startsWith('/') || message.author.bot
+function is_match_translate_rule(message:Message ): boolean{
+    return !message.content.startsWith('/') && !message.author.bot
+}
+
+function is_match_command_rule(message:Message, commandName:string):boolean{
+    return !!message.reference && message.content.startsWith("/"+commandName) && !message.author.bot;
 }
 
 export function register(bot: Bot){
     bot.client.on(Events.MessageCreate, async (message) => {
         try{//pass through an error
-            if ( ! is_match_ignore_rule(message) ) {
+            if ( is_match_translate_rule(message) ) {
                 await send_translated_message(bot,message);
+            } else if (is_match_command_rule(message, "cm")){
+
+            } else if (is_match_command_rule(message, "edit")){
+
+            } else if (is_match_command_rule(message, "delete")){
+                
             }
         } catch (e) {
             console.error(e);
