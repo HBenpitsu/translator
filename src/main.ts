@@ -1,3 +1,5 @@
+#!/usr/local/bin/node
+
 import {Client,Collection,SlashCommandBuilder,Events,Message,BaseChannel,EmbedBuilder,GatewayIntentBits, Interaction, CommandInteraction} from 'discord.js';
 import {readdir} from 'fs/promises';
 
