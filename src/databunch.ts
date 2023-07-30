@@ -3,8 +3,9 @@ import {Bot} from './main.js';
 
 export async function fetch(solver:Bot, message:Message ): Promise<MessageBunch>{
     const message_bunch = await solver.database.message_bunch_of(message.channelId, message.id);
+    if (message_bunch.length == 0){return new MessageBunch(new ChannelBunch([],[]),[],[],[]);};
     await message_bunch.resolve(solver);
-    return message_bunch 
+    return message_bunch;
 }
 
 export async function bunch_up(solver:Bot, messages: Message[]): Promise<MessageBunch>{
@@ -42,7 +43,7 @@ class GeneralBunch<T>{
     readonly langs: string[];
     readonly values: T[];
 
-    constructor(langs:string[], values:any[]){
+    constructor(langs:string[], values:T[]){
         this.langs = langs;
         this.values = values;
     }
@@ -62,6 +63,18 @@ class GeneralBunch<T>{
             };    
         }
     };
+
+    public lang_ot(lang: string){
+        return this.langs.filter(x=>x!=lang)
+    };
+
+    public value_ot(lang: string){
+        const result_buffer = []
+        for (let lang_ of this.lang_ot(lang)){
+            result_buffer.push(this.value(lang_));
+        }
+        return result_buffer
+    }
 }
 
 export class EmbedBunch extends GeneralBunch<EmbedBuilder> {
@@ -72,6 +85,23 @@ export class EmbedBunch extends GeneralBunch<EmbedBuilder> {
             };    
         }
         return [];
+    }
+}
+
+export class BooleanBunch extends GeneralBunch<boolean>{
+    public all(){
+        let res = true;
+        for ( let elem of this.values){
+            res &&= elem;
+        }
+        return res
+    }
+    public some(){
+        let res = false;
+        for ( let elem of this.values){
+            res ||= elem;
+        }
+        return res;
     }
 }
 
@@ -136,6 +166,10 @@ export class ChannelBunch{
                 return this.langs[i]//corresponds to id in ids
             }
         }
+    };
+
+    public lang_ot(lang: string){
+        return this.langs.filter(x=>x!=lang)
     };
 
     public id(lang:string ): string|undefined{
@@ -251,6 +285,10 @@ export class MessageBunch{
                 return this.langs[i];//corresponds to id in ids
             }
         }
+    };
+
+    public lang_ot(lang: string){
+        return this.langs.filter(x=>x!=lang)
     };
 
     public id(lang:string ): string|undefined{
