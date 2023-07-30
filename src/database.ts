@@ -4,6 +4,10 @@ import { InviteStageInstance } from 'discord.js';
 import {Bot} from './main.js';
 import moment from 'moment';
 
+export const task = {
+    delete: 0
+}
+
 export class DatabaseInterface {
     private bot: Bot;
     private host: string;
@@ -59,7 +63,7 @@ export class DatabaseInterface {
         for (let i=0; i<messagebunch.ids.length;i++){
             values.push(`(
                 ${next_bunch_id},
-                ${messagebunch.messages![i].channelId},
+                ${messagebunch.messages![i]!.channelId},
                 ${messagebunch.ids[i]},
                 '${messagebunch.langs[i]}',
                 ${Number(messagebunch.original[i])},
@@ -70,7 +74,6 @@ export class DatabaseInterface {
         await connection.query(query);
         await connection.commit()
         connection.release()
-
 
         return;
     }
@@ -85,8 +88,7 @@ export class DatabaseInterface {
         const connection = await this.pool.getConnection()
         const query = `SELECT msg_id,lang,original FROM messages WHERE bunch_id=(SELECT bunch_id FROM messages WHERE chl_id=${channelid} AND msg_id=${messageid});`
          var [data] = await connection.query(query);
-         connection.release()
-
+         connection.release();
 
          //type check
          if (!(data instanceof Array)){throw new Error(`something unexpected happened on attemp to ${query}`)};
@@ -106,6 +108,52 @@ export class DatabaseInterface {
          //Generate MessageBunch Instance
          const messagebunch = new MessageBunch(channel_bunch, lang, msg_id, original);
          return messagebunch;
+    }
+    public async delete_message_bunch(channelId:string, messageId:string){
+        const connection = await this.pool.getConnection()
+        await connection.beginTransaction()
+
+        //decide bunch_id
+        var query = `SELECT bunch_id FROM messages WHERE chl_id=${channelId} AND msg_id=${messageId} LIMIT 1;`
+        var [data]= await connection.query(query);
+        //type check
+        if (!(data instanceof Array)){throw new Error(`something unexpected happened on attemp to ${query}`)};
+        if (data.length < 1){
+            console.error("unexisting message bunch was attempted to delete.");
+            return;
+        };
+        if ( 'bunch_id' in data[0]){
+            var bunch_id = data[0].bunch_id;
+        } else {
+        throw new Error(`something unexpected happened on attemp to ${query}`);
+        };
+        //delete message bunch
+        var query = `DELETE FROM messages WHERE bunch_id=${bunch_id}`;
+        await connection.query(query);
+        await connection.commit();
+        connection.release();
+    }
+    public async register_task(task_id:number, channelId:string, messageId:string){
+        const connection = await this.pool.getConnection()
+        await connection.query(`INSERT INTO taskbuffer VALUES (${task_id},${channelId},${messageId})`)
+        connection.release()
+    }
+    public async task_processing(task_id:number, channelId:string, messageId:string){
+        const connection = await this.pool.getConnection()
+        const query = `SELECT FROM taskbuffer WHERE task_id=${task_id} AND IDENTIFIER_1=${channelId} AND IDENTIFIER_2=${messageId}`
+        const [data] = await connection.query(query)
+        connection.release()
+        if (!(data instanceof Array)){throw new Error(`something unexpected happened on attemp to ${query}`)};
+        if (data.length>0){
+            return true;
+        } else {
+            return false;
+        }
+    }
+    public async done_task(task_id:number, channelId:string, messageId:string){
+        const connection = await this.pool.getConnection()
+        await connection.query(`DELETE FROM taskbuffer WHERE task_id=${task_id} AND IDENTIFIER_1=${channelId} AND IDENTIFIER_2=${messageId}`)
+        connection.release()
     }
 
     public async registerChannelBunchCache(channelbunch: ChannelBunch){

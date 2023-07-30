@@ -21,7 +21,7 @@ export class embeds_generators{
                 }
             )
             embed.setColor([25,25,25])
-            embed.setDescription(refered_message!.content)
+            embed.setDescription(refered_message!.content || ":No text content:")
 
             embeds.push(embed)
         }

@@ -3,9 +3,10 @@ import {Events} from 'discord.js';
 
 export function register(bot: Bot){
     bot.client.on(Events.InteractionCreate, async interaction => {
+        console.log("Interaction was created:",interaction);
         if (!interaction.isChatInputCommand()) return;
     
-        const command = bot.client.commands.get(interaction.commandName);
+        const command = bot.slashcommands.get(interaction.commandName);
     
         if (!command) {
             console.error(`No command matching ${interaction.commandName} was found.`);
@@ -13,7 +14,7 @@ export function register(bot: Bot){
         }
     
         try {
-            await command.execute(interaction);
+            await command.execute(bot, interaction);
         } catch (error) {
             console.error(error);
             if (interaction.replied || interaction.deferred) {

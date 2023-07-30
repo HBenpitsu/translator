@@ -3,29 +3,7 @@ import {Events,Message,Channel,WebhookMessageCreateOptions,TextChannel,Attachmen
 import { ChannelBunch, EmbedBunch, MessageBunch, bunch_up } from '../databunch.js';
 import { translate } from '../translatorInterface.js';
 import { embeds_generators } from '../visual.js';
-
-async function send_message_with_webhhok(channel:TextChannel, options:WebhookMessageCreateOptions): Promise<undefined | Message>{
-    const webhook = (await channel.fetchWebhooks()).first();
-    if (typeof webhook == 'undefined'){
-        console.error("there was no webhook client in the channel:",channel);
-        return;
-    } else {
-        return await webhook.send(options);
-    }
-}
-
-
-/**message bunch auto resolve*/
-async function get_refered_messagebunch(bot:Bot ,message: Message): Promise<MessageBunch|null>{
-    if(message.reference){
-        let refered_messagebunch = await bot.database.message_bunch_of(message.reference.channelId,message.reference.messageId!)
-        await refered_messagebunch.resolve(bot)
-        if(refered_messagebunch.vaild){
-            return refered_messagebunch;
-        }
-    }
-    return null;
-}
+import { get_refered_messagebunch,send_message_with_webhhok } from '../fundamental.js';
 
 async function send_translated_message(bot:Bot, message: Message){
 
@@ -96,15 +74,21 @@ function is_match_command_rule(message:Message, commandName:string):boolean{
 
 export function register(bot: Bot){
     bot.client.on(Events.MessageCreate, async (message) => {
+        console.log("message was created:",message)
         try{//pass through an error
             if ( is_match_translate_rule(message) ) {
+                console.log("translate:", message);
                 await send_translated_message(bot,message);
-            } else if (is_match_command_rule(message, "cm")){
-
-            } else if (is_match_command_rule(message, "edit")){
-
-            } else if (is_match_command_rule(message, "delete")){
-                
+            }
+            for (let replycommand of bot.replycommands){
+                if(is_match_command_rule(message, replycommand.name) && message.reference){
+                    console.log("command", message);
+                    replycommand.execute(
+                        bot,
+                        await message.fetchReference(),
+                        message
+                    )
+                }
             }
         } catch (e) {
             console.error(e);

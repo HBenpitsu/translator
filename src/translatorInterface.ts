@@ -61,7 +61,7 @@ async function translate_with_google(text:string , from:string , to:string): Pro
     }
 }
 
-export async function translate(text:string, from:string, to:string, model:string = "deepl"): Promise<string>{
+export async function translate(text:string, from:string, to:string, model:string = "google"): Promise<string>{
     switch(model){
         case 'deepl':return translate_with_deepl(text, from, to);
         case 'google':return translate_with_google(text, from, to);

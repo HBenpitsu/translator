@@ -1,19 +1,28 @@
-import {Client as RClient,Collection,SlashCommandBuilder,Events,Message,BaseChannel,EmbedBuilder,GatewayIntentBits} from 'discord.js';
+import {Client,Collection,SlashCommandBuilder,Events,Message,BaseChannel,EmbedBuilder,GatewayIntentBits, Interaction, CommandInteraction} from 'discord.js';
 import {readdir} from 'fs/promises';
 
 import dotenv from 'dotenv';
 dotenv.config({"path": "../.env"});
 
 import {DatabaseInterface} from './database.js';
-
-class Client extends RClient{
-    commands!: Collection<string, {data:Omit<SlashCommandBuilder, "addSubcommand" | "addSubcommandGroup">,execute: Function}>;
-}
-
+import { MessageBunch } from './databunch.js';
 export class Bot{
     private token: string;
     public client: Client;
     public database: DatabaseInterface;
+    public slashcommands: Collection<
+        string,
+        {
+            data:Omit<SlashCommandBuilder, "addSubcommand" | "addSubcommandGroup">,
+            execute: (bot:Bot,interaction:CommandInteraction)=>void
+        }
+    >;
+    public taskbuffer:string[]=[];
+
+    public replycommands: {
+        name:string, 
+        execute:(bot:Bot, refered_message: Message, command_message: Message)=>void
+    }[];
 
     constructor(token: string,mysql_host: string,mysql_user: string,mysql_password: string,mysql_database: string) {
         this.token = token;
@@ -34,7 +43,8 @@ export class Bot{
             mysql_password,
             mysql_database
         );
-        this.client.commands = new Collection();
+        this.slashcommands = new Collection();
+        this.replycommands = [];
     }
 
     /**register modules defined in external files which match to `dir_path/*`.
@@ -64,6 +74,7 @@ export class Bot{
         await Promise.all([
             this.register('./eventlisteners'),
             this.register('./slashcommands'),
+            this.register('./replycommands')
             ]
         );
         

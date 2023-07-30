@@ -3,7 +3,7 @@ import {Bot} from './main.js';
 
 export async function fetch(solver:Bot, message:Message ): Promise<MessageBunch>{
     const message_bunch = await solver.database.message_bunch_of(message.channelId, message.id);
-    message_bunch.resolve(solver);
+    await message_bunch.resolve(solver);
     return message_bunch 
 }
 
@@ -79,7 +79,7 @@ export class ChannelBunch{
     readonly langs: string[];
     readonly ids: string[];
     readonly length: number;
-    public channels: Channel[]|undefined;
+    public channels: (TextChannel|null)[]|undefined;
     public solved: boolean;
     public vaild: boolean|undefined;
     /**
@@ -93,12 +93,6 @@ export class ChannelBunch{
 
         this.langs = langs;
         this.ids = ids;
-        
-        //consistency check
-        if(this.langs.length != this.ids.length){
-            this.vaild = false;
-            console.error("ChannelBunch was marked as invaild because langs.length != ids.length:",this);
-        }
 
         this.length = langs.length;
     };
@@ -107,20 +101,29 @@ export class ChannelBunch{
         //skip double resolution
         if (this.solved) {return this;}
         this.solved = true;
+        
+        //consistency check
+        if(this.langs.length != this.ids.length){
+            this.vaild = false;
+            this.solved = true;
+            console.error("ChannelBunch was marked as invaild because langs.length != ids.length:",this);
+            return this;
+        }
 
         //fetch Channel object
         const promise_buffer = []
         for (let id of this.ids){
-            promise_buffer.push(solver.client.channels.fetch(id))
+            promise_buffer.push(solver.client.channels.resolve(id))
         }
         const res = await Promise.all(promise_buffer);
 
         //type check
         if (res.includes(null)){
+            this.channels = res as (TextChannel|null)[];
             this.vaild = false;
             console.error("ChannelBunch was marked as invaild:",this);
         }else{
-            this.channels = res as Channel[];
+            this.channels = res as (TextChannel|null)[];
             this.vaild = true;
         }
     
@@ -135,11 +138,19 @@ export class ChannelBunch{
         }
     };
 
+    public id(lang:string ): string|undefined{
+        for (let i=0; i<this.langs.length; i++){
+            if (this.langs[i] == lang) {
+                return this.ids[i];//corresponds to lang in langs
+            }
+        }
+    };
+
     /**need to resolve Channelbunch before execute this method */
-    public channel(lang:string ): Channel|undefined{
+    public channel(lang:string ): TextChannel|null{
         if(!this.solved || !this.vaild){//resolution check
             console.error("`channel` of invalid or unsolved ChannelBunch was called:",this);
-            return;
+            return null;
         }
 
         for (let i=0; i<this.langs.length; i++){
@@ -147,6 +158,7 @@ export class ChannelBunch{
                 return this.channels![i]//corresponds to lang in langs
             }
         }
+        return null;
     };
 }
 
@@ -156,7 +168,7 @@ export class MessageBunch{
     readonly original: boolean[];
     readonly channels: ChannelBunch;
     readonly length: number;
-    public messages: Message[]|undefined;
+    public messages: (Message|null)[]|undefined;
     public solved: boolean;
     public vaild: boolean|undefined;
     /**
@@ -178,32 +190,36 @@ export class MessageBunch{
         this.ids = ids;
         this.original = original;
         
-        if(channels.length != langs.length || langs.length != ids.length || ids.length != original.length){//consistency check
-            this.vaild = false;
-            console.error("ChannelBunch was marked as invaild because channels.length, langs.length, ids.length and original.length aren't the same:",this);
-        }
-        
         this.length = langs.length;
     };
 
     public async resolve(solver:Bot): Promise<MessageBunch>{
         await this.channels.resolve(solver)//prepare to resolve messages
         
+        if(this.vaild===false){
+            this.solved=true
+            return this;
+        }
         if(this.solved){return this;}//skip double resolution
         this.solved = true;
         this.vaild = true;
-
+        
         if (!this.channels.vaild){//consistency check
             console.error("MessageBunch was marked as invaild because passed channels were invaild:",this);
             this.vaild=false;
             return this;
         }
-
+        if(this.channels.length != this.langs.length || this.langs.length != this.ids.length || this.ids.length != this.original.length){//consistency check
+            this.vaild = false;
+            this.solved = true;
+            console.error("MessageBunch was marked as invaild because channels.length, langs.length, ids.length and original.length aren't the same:",this);
+        }
+        
         const promise_buffer = []//type check/fetch message Object
         for (let lang of this.langs){
             const channel = this.channels.channel(lang)!
             if ('messages' in channel){
-                promise_buffer.push(channel.messages.fetch(this.ids[this.langs.indexOf(lang)]));
+                promise_buffer.push(channel.messages.resolve(this.ids[this.langs.indexOf(lang)]));
             } else {
                 console.error("MessageBunch resolution was failded bacause the `channel` did not have an attribute, messages:",this);
                 this.vaild=false;
@@ -215,10 +231,10 @@ export class MessageBunch{
     };
 
     /**need to resolve Messagebunch before execute this method. */
-    public origin(): Message|undefined{
+    public origin(): Message|null{
         if(!this.solved || !this.vaild){//resolution check
             console.error("`origin` of invalid or unsolved MessageBunch was called:",this);
-            return;
+            return null;
         }
 
         for (let i=0; i<this.original.length; i++){
@@ -226,6 +242,7 @@ export class MessageBunch{
                 return this.messages![i];//corresponds to true in original
             }
         }
+        return null;
     };
 
     public lang(id:string ): string|undefined{
@@ -236,10 +253,18 @@ export class MessageBunch{
         }
     };
 
-    public message(lang:string ): Message|undefined{
+    public id(lang:string ): string|undefined{
+        for (let i=0; i<this.langs.length; i++){
+            if (this.langs[i] == lang) {
+                return this.ids[i];//corresponds to lang in langs
+            }
+        }
+    };
+
+    public message(lang:string ): Message|null{
         if(!this.solved || !this.vaild){//resolution check
             console.error("`message` of invalid or unsolved ChannelBunch was called:",this);
-            return;
+            return null;
         }
 
         for (let i=0; i<this.langs.length; i++){
@@ -247,5 +272,6 @@ export class MessageBunch{
                 return this.messages![i]//corresponds to lang in langs
             }
         }
+        return null;
     };
 }

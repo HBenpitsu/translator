@@ -5,12 +5,12 @@ export const data = new SlashCommandBuilder()
         .setName('ping')
         .setDescription("send pong")
 
-export async function execute(interaction:CommandInteraction){
+export async function execute(bot:Bot, interaction:CommandInteraction){
     //interaction.deferReply();
     console.log(interaction)
     interaction.reply('pong');
 }
 
 export function register(bot:Bot){
-    bot.client.commands.set(data.name, {data:data, execute:execute});
+    bot.slashcommands.set(data.name, {data:data, execute:execute});
 }
